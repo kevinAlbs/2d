@@ -1,0 +1,172 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  
+  <title>2D</title>
+  <meta name="description" content="2D Game">
+  <meta name="author" content="Kevin Albertson">
+  <style type="text/css">
+  body{
+    background: #555;
+  }
+  #container{
+    margin: 50px auto;
+    width: 800px;
+  }
+  </style>
+  
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+</head>
+
+<body>
+	<div id="container">
+    <div id="game"></div>
+  </div>
+  <script src="js/phaser.js"></script>
+  <script>
+  	(function(){
+  	var game = new Phaser.Game(800, 600, Phaser.AUTO, "game", {preload: preload, create: create, update: update, render: render});
+  	var pl = null;
+    var pl_bullets = null;
+    var e1 = null;
+  	var cursors = null;
+    var locked = false;
+    var lockTimer = 100;
+
+    var eTest = null;
+
+  	function preload(){
+  		game.load.image("player", "img/player-glow.png");
+      game.load.image("bullet", "img/bullet-glow.png");
+      game.load.image("bg", "img/bg.png");
+      game.load.image("enemy1", "img/enemy.png");
+  	}
+  	function create(){
+      game.add.tileSprite(0,0,1200,1000,"bg");
+      game.world.setBounds(0,0,1200,1000);
+  		game.physics.startSystem(Phaser.Physics.ARCADE);
+  		//game.stage.backgroundColor = "#000000";
+
+  		pl = game.add.sprite(game.width/2 - 8, game.height/2 - 8,"player");
+  		game.physics.enable(pl, Phaser.Physics.ARCADE);
+  		pl.body.collideWorldBounds = true;
+      pl.body.setSize(16, 16, 0, 0);
+      pl.anchor.set(.5);
+      pl.cameraOffset.x = 100;
+      pl.cameraOffset.y = 100;
+      game.camera.follow(pl);
+
+      pl_bullets = game.add.group();
+      pl_bullets.enableBody = true;
+      pl_bullets.physicsBodyType = Phaser.Physics.ARCADE;
+      pl_bullets.setAll("outOfBoundsKill", true);
+      pl_bullets.setAll("anchor.x", .5);
+      pl_bullets.setAll("anchor.y", .5);
+
+      e1 = game.add.group();
+      e1.enableBody = true;
+      e1.physicsBodyType = Phaser.Physics.ARCADE;
+      createEnemy(e1, "enemy1", 100, 100);
+
+  		cursors = {
+        up: game.input.keyboard.addKey(Phaser.Keyboard.W),
+        left: game.input.keyboard.addKey(Phaser.Keyboard.A),
+        right: game.input.keyboard.addKey(Phaser.Keyboard.D),
+        down: game.input.keyboard.addKey(Phaser.Keyboard.S)
+      };
+  	}
+    function createEnemy(group, sprite, x, y){
+      var e = group.getFirstDead();
+      if(e != null){
+        e.reset(x,y);
+      }
+      else{
+        e = group.create(x, y, sprite);
+        e.anchor.setTo(.5, .5);
+        e.body.setSize(25, 25, 0, 1);
+      }
+    }
+    function onEnemyHit(enemy, bullet){
+      bullet.kill();
+      enemy.kill();
+    }
+  	function update(){
+      var pl_angle = Math.PI + game.physics.arcade.angleToPointer(pl);
+      pl.rotation = pl_angle;
+      var s = 200;
+      var dir = 0;
+  		if(cursors.left.isDown){
+  			dir = -1;
+  		}
+  		else if(cursors.right.isDown){
+  			dir = 1;
+  		}
+      if(dir != 0){
+        pl.body.velocity.x += (dir * s) / 10;
+        if(Math.abs(pl.body.velocity.x) > s){
+          pl.body.velocity.x = dir * s;
+        }
+      }
+      else{
+        pl.body.velocity.x /= 1.1;
+      }
+
+      dir = 0;
+      if(cursors.up.isDown){
+        dir = -1;
+      }
+      else if(cursors.down.isDown){
+        dir = 1;
+      }
+      if(dir != 0){
+        pl.body.velocity.y += (dir * s) / 10;
+        if(Math.abs(pl.body.velocity.y) > s){
+          pl.body.velocity.y = dir * s;
+        }
+      }
+      else{
+        pl.body.velocity.y /= 1.1;
+      }
+
+      if(game.input.mouse.button == Phaser.Mouse.LEFT_BUTTON && !locked){
+        locked = true;
+        lockTimer = 200;
+        //fire on interval
+        var b = pl_bullets.getFirstDead();
+        if(b != null){
+          b.reset(pl.body.x + pl.body.width/2, pl.body.y + pl.body.height/2);
+        }
+        else{
+          b = pl_bullets.create(pl.body.x + pl.body.width/2, pl.body.y + pl.body.height/2, "bullet");
+        }
+        var bs = 350;
+        b.anchor.setTo(.5, .5);
+        b.checkWorldBounds = true;
+        b.outOfBoundsKill = true;
+        b.rotation = pl_angle;
+        b.body.velocity.x = -1 * bs * Math.cos(pl_angle);
+        b.body.velocity.y = -1 * bs * Math.sin(pl_angle);
+      }
+      else{
+        lockTimer -= game.time.elapsed;
+        if(lockTimer <= 0){
+          locked = false;
+        }
+      }
+      
+      game.physics.arcade.overlap(e1, pl_bullets, onEnemyHit);
+  	}
+  	function render(){
+      //game.debug.body(pl);
+      //game.debug.body(e1.getFirstAlive());
+    }
+
+   }());
+  </script>
+</body>
+</html>
