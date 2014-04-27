@@ -37,19 +37,42 @@
   	var cursors = null;
     var locked = false;
     var lockTimer = 100;
+    var endLevel = false;
+    var endLevelTimer = 0;
 
-    var eTest = null;
+    var portal = null;
+    var portalOpening = null;
+    var portalOpen = null;
+    var portalAvailable = true;
+
 
   	function preload(){
   		game.load.image("player", "img/player-glow.png");
       game.load.image("bullet", "img/bullet-glow.png");
       game.load.image("bg", "img/bg.png");
       game.load.image("enemy1", "img/enemy.png");
+      game.load.image("portal-closed", "img/portal.png");
+      game.load.image("portal-opening", "img/opening.png");
+      game.load.image("portal-open", "img/portal-open.png");
   	}
   	function create(){
       game.add.tileSprite(0,0,1200,1000,"bg");
       game.world.setBounds(0,0,1200,1000);
   		game.physics.startSystem(Phaser.Physics.ARCADE);
+      portal = game.add.sprite(Math.floor(Math.random() * 10) * 16 + 13, Math.floor(Math.random() * 10) * 16 + 13, "portal-closed");
+
+      game.physics.enable(portal, Phaser.Physics.ARCADE);
+      portal.body.immovable = true;
+      portal.anchor.setTo(.5, .5);
+      portal.body.setSize(46, 46);
+
+      portalOpening = game.add.sprite(portal.body.x, portal.body.y, "portal-opening");
+      portalOpening.anchor.setTo(.5, .5);
+      portalOpening.scale.setTo(0,0);
+
+      portalOpen = game.add.sprite(portal.body.x, portal.body.y, "portal-open");
+      portalOpen.anchor.setTo(.5, .5);
+      portalOpen.visible = false;
   		//game.stage.backgroundColor = "#000000";
 
   		pl = game.add.sprite(game.width/2 - 8, game.height/2 - 8,"player");
@@ -64,14 +87,12 @@
       pl_bullets = game.add.group();
       pl_bullets.enableBody = true;
       pl_bullets.physicsBodyType = Phaser.Physics.ARCADE;
-      pl_bullets.setAll("outOfBoundsKill", true);
-      pl_bullets.setAll("anchor.x", .5);
-      pl_bullets.setAll("anchor.y", .5);
 
       e1 = game.add.group();
       e1.enableBody = true;
       e1.physicsBodyType = Phaser.Physics.ARCADE;
       createEnemy(e1, "enemy1", 100, 100);
+
 
   		cursors = {
         up: game.input.keyboard.addKey(Phaser.Keyboard.W),
@@ -80,6 +101,11 @@
         down: game.input.keyboard.addKey(Phaser.Keyboard.S)
       };
   	}
+
+    function createExplosion(){
+
+    }
+
     function createEnemy(group, sprite, x, y){
       var e = group.getFirstDead();
       if(e != null){
@@ -90,12 +116,60 @@
         e.anchor.setTo(.5, .5);
         e.body.setSize(25, 25, 0, 1);
       }
+      e.hasEntered = false;//custom property
+      e.outOfBoundsKill = true;
+      e.body.velocity.x = 100;
     }
     function onEnemyHit(enemy, bullet){
       bullet.kill();
       enemy.kill();
     }
+
+    function onPortalHit(portal, bullet){
+      bullet.kill();
+      
+      if(portalOpening.scale.x >= 1){
+        //end level
+        portalOpen.visible = true;
+        endLevel = true;
+      }
+      else{
+        portalOpening.scale.x += .05;
+        portalOpening.scale.y += .05;
+      }
+    }
+
+    //For some unknown reason, order is flipped, perhaps because player is sprite and enemy is group??
+    function onEnemyPlayerCollision(player, enemy){
+      enemy.kill();
+      //TODO: reduce player health
+    }
+
+
   	function update(){
+      if(endLevel){
+        var finalVelocityX = (portal.body.x - pl.body.x)/10;
+        pl.body.velocity.x += finalVelocityX/10;
+        if(pl.body.velocity.x > finalVelocityX){
+          pl.body.velocity.x = finalVelocityX;
+        }
+        var finalVelocityY = (portal.body.y - pl.body.y)/10;
+        pl.body.velocity.y += finalVelocityY/10;
+        if(pl.body.velocity.y > finalVelocityY){
+          pl.body.velocity.y = finalVelocityY;
+        }
+        if(pl.scale.x > 0){
+          pl.scale.x -= .01;
+          pl.scale.y -= .01;
+        }
+        endLevelTimer += game.time.elapsed;
+        if(endLevelTimer >= 2000){
+          console.log("WIN");
+          endLevel = false;
+        }
+
+        return;
+      }
       var pl_angle = Math.PI + game.physics.arcade.angleToPointer(pl);
       pl.rotation = pl_angle;
       var s = 200;
@@ -145,10 +219,12 @@
           b = pl_bullets.create(pl.body.x + pl.body.width/2, pl.body.y + pl.body.height/2, "bullet");
         }
         var bs = 350;
+        b.body.setSize(5,5, 0,0);
         b.anchor.setTo(.5, .5);
         b.checkWorldBounds = true;
         b.outOfBoundsKill = true;
         b.rotation = pl_angle;
+        
         b.body.velocity.x = -1 * bs * Math.cos(pl_angle);
         b.body.velocity.y = -1 * bs * Math.sin(pl_angle);
       }
@@ -159,11 +235,19 @@
         }
       }
       
+      if(portalAvailable){
+        game.physics.arcade.collide(pl, portal);
+      }
       game.physics.arcade.overlap(e1, pl_bullets, onEnemyHit);
+      game.physics.arcade.overlap(e1, pl, onEnemyPlayerCollision);
+      game.physics.arcade.overlap(portal, pl_bullets, onPortalHit);
   	}
   	function render(){
       //game.debug.body(pl);
       //game.debug.body(e1.getFirstAlive());
+      if(pl_bullets.getFirstAlive()){
+        //game.debug.body(pl_bullets.getFirstAlive());
+      }
     }
 
    }());
