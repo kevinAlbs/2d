@@ -1,5 +1,28 @@
 var genTimer = 700;
 
+function fireBullet(enemy, target, angle){
+    var b = e_bullets.getFirstDead();
+    if(b != null){
+      b.reset(enemy.body.x + enemy.body.width/2, enemy.body.y + enemy.body.height/2);
+    }
+    else{
+      b = e_bullets.create(enemy.x + enemy.body.width/2, enemy.y + enemy.body.height/2, "e_bullet");
+    }
+    if(target != null){
+      angle = game.physics.arcade.angleBetween(enemy, target);
+    }
+    var variance = (Math.random() * Math.PI / 12) - Math.PI/24;
+    angle += variance;
+    var bs = 300;
+    b.anchor.setTo(.5, .5);
+    b.body.setSize(5,5, 0,0);
+    b.checkWorldBounds = true;
+    b.outOfBoundsKill = true;
+    b.rotation = angle;
+    
+    b.body.velocity.x = bs * Math.cos(angle);
+    b.body.velocity.y = bs * Math.sin(angle);
+}
 function createEnemy(group, sprite, dir, fixedX, fixedY){
   var e = group.getFirstDead();
   if(e != null){
@@ -164,4 +187,23 @@ function enemyGen(){
     }
     genTimer = 750 - (level * 50);
   }
+}
+
+function dist(s1, s2){
+  return Math.sqrt(Math.pow(s1.x - s2.x, 2) + Math.pow(s1.y - s2.y, 2));
+}
+//fire bullets maybe
+function fireUpdate(){
+  e2.forEachAlive(function(e){
+    if(dist(e, pl) < 450){
+      if(!e.hasFired || e.fireTimer < 0){
+        e.hasFired = true;
+        e.fireTimer = 1500 + Math.random() * 3000;
+        fireBullet(e, pl);
+      }
+      else{
+        e.fireTimer -= game.time.elapsed;
+      }
+    }
+  })
 }

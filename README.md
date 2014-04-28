@@ -4,7 +4,7 @@ TODO:
 3. enemy formations [done]
 4. infinite levels [done]
 5. add explosions [done]
-5.5. enemy bullets
+5.5. enemy bullets [done]
 5.6. feedback messages
 6. email input and recording of info on back-end
 
