@@ -7,13 +7,80 @@
   <title>2D</title>
   <meta name="description" content="2D Game">
   <meta name="author" content="Kevin Albertson">
+  <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
   <style type="text/css">
+  *{
+    margin: 0px;
+    padding: 0px;
+    font-family: "Open Sans";
+    font-size: 14px;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
   body{
     background: #555;
   }
   #container{
     margin: 50px auto;
     width: 800px;
+    position: relative;
+  }
+  #stats{
+    background: #000;
+    padding: 5px;
+    border-top: 3px white solid;
+  }
+  #stats p{
+    color: #FFF;
+    margin: 5px 10px;
+  }
+  .bar{
+    display: inline-block;
+    width: 300px;
+    height: 20px;
+    position: relative;
+    top: 5px;
+    border: 1px #666 solid;
+    background: #555;
+  }
+  .bar .fill{
+    background: rgb(0, 255, 0);
+    width: 300px;
+    height: 20px;
+    position: absolute;
+    left: 0px;
+    top: 0px;
+  }
+  #summoners{
+    background: #FFF;
+    color: #000;
+    padding: 4px;
+    font-weight: bold;
+    border-radius: 4px;
+  }
+  #plus_one{
+    font-size: 24px;
+    color: #FFF;
+    font-weight: bold;
+    position: absolute;
+    z-index: 5;
+    left: 160px;
+    bottom: 50px;
+    display: none;
+  }
+  .screen{
+    position: absolute;
+    left: 0px;
+    top: 100px;
+    width: 760px;
+    height: 360px;
+    background: rgba(255,255,255,.8);
+    padding: 20px;
+    display: none;
   }
   </style>
   
@@ -25,9 +92,22 @@
 
 <body>
 	<div id="container">
+    <div class="screen" id="death">
+      <a href="#">Restart?</a>
+    </div>
     <div id="game"></div>
+    <div id="stats">
+      <div id="plus_one">+1</div>
+      <div class="row">
+        <p>Summoners Obtained <span id="summoners"></span></p>
+      </div>
+      <div class="row">
+        <p>Health <span class="bar" id="health"><span class="fill"></span></spaniv></p>
+      </div>
+    </div>
   </div>
   <script src="js/phaser.js"></script>
+  <script src="js/jquery.js"></script>
   <script src="js/enemy.js"></script>
   <script>
 
@@ -37,6 +117,8 @@
     var e1 = null;
     var diamonds = null;
     var dMeter = 0;
+    var dNeeded = 7;
+    var dGotten = false;
   	var cursors = null;
     var locked = false;
     var lockTimer = 100;
@@ -50,9 +132,35 @@
 
     var level = 1;
 
+    var stats = {
+      health: $("#health"),
+      summoners: $("#summoners")
+    };
 
+    function startLevel(n){
+      //remove all bullets
+      //remove all enemies
+      level = n;
+      e1.forEachAlive(function(e){
+        e.kill()
+      });
+      pl_bullets.forEachAlive(function(b){
+        b.kill();
+      });
+      dMeter = 0;
+      resetPortal();
+      
+      pl.reset(game.width/2, game.height/2);
+      pl.health = 100;
 
+    }
 
+    function resetPortal(){
+      portalAvailable = false;
+      portalOpening.scale.setTo(0,0);
+      portalOpen.visible = false;
+      portal.visible = false;
+    }
   	function preload(){
   		game.load.image("player", "img/player-glow.png");
       game.load.image("bullet", "img/bullet-glow.png");
@@ -71,7 +179,7 @@
 
       //Portal set up
       portal = game.add.sprite(0, 0, "portal-closed");
-      portal.visible = false;
+      
       game.physics.enable(portal, Phaser.Physics.ARCADE);
       portal.body.immovable = true;
       portal.anchor.setTo(.5, .5);
@@ -79,21 +187,23 @@
 
       portalOpening = game.add.sprite(portal.body.x, portal.body.y, "portal-opening");
       portalOpening.anchor.setTo(.5, .5);
-      portalOpening.scale.setTo(0,0);
 
       portalOpen = game.add.sprite(portal.body.x, portal.body.y, "portal-open");
       portalOpen.anchor.setTo(.5, .5);
-      portalOpen.visible = false;
+
+      resetPortal();
+      
 
 
       //Player set up
-  		pl = game.add.sprite(game.width/2 - 8, game.height/2 - 8,"player");
+  		pl = game.add.sprite(game.width/2, game.height/2,"player");
   		game.physics.enable(pl, Phaser.Physics.ARCADE);
   		pl.body.collideWorldBounds = true;
       pl.body.setSize(16, 16, 0, 0);
       pl.anchor.set(.5);
       pl.cameraOffset.x = 100;
       pl.cameraOffset.y = 100;
+      pl.health = 100;
       game.camera.follow(pl);
 
       //Player bullets set up
@@ -157,12 +267,14 @@
     function onEnemyPlayerCollision(player, enemy){
       enemy.kill();
       //TODO: reduce player health
+      pl.health -= 100;
     }
 
     function onDiamondCollision(player, diamond){
       diamond.kill();
       dMeter += 1; //increase portal meter
-      if(dMeter > 0){
+      dGotten = true;//to show plus one
+      if(dMeter >= dNeeded){
         //show portal
         var xVar = 100, yVar = 100;
         if(pl.x + 100 > game.world.width) xVar = -100;
@@ -194,8 +306,14 @@
           console.log("WIN");
           endLevel = false;
         }
-
         return;
+      }
+      if(pl.health <= 0){
+        //show explosion
+        //pause game
+        game.paused = true;
+        //show death screen
+        $("#death").fadeIn();
       }
       var pl_angle = Math.PI + game.physics.arcade.angleToPointer(pl);
       pl.rotation = pl_angle;
@@ -236,7 +354,7 @@
 
       if(game.input.mouse.button == Phaser.Mouse.LEFT_BUTTON && !locked){
         locked = true;
-        lockTimer = 200;
+        lockTimer = 300;
         //fire on interval
         var b = pl_bullets.getFirstDead();
         if(b != null){
@@ -273,6 +391,7 @@
       game.physics.arcade.overlap(diamonds, pl, onDiamondCollision);
       enemyGen();
       killOutOfBoundEnemies();
+      updateStats();
   	}
   	function render(){
       //game.debug.body(pl);
@@ -283,6 +402,32 @@
     }
 
 
+    function updateStats(){
+      if(dGotten){
+        dGotten = false;
+        $("#plus_one").show().animate({
+          "bottom": "180",
+          "opacity": "0"
+        }, 1000, "linear", function(){
+          $(this).css({
+          "bottom": "50px",
+          "opacity": "1"
+          }).hide();//reset
+        })
+      }
+      $("#health").find(".fill").css({
+        width : (pl.health * 3) + "px",
+        background: "rgb(" + Math.round((255/100) *(100 - pl.health)) + "," + Math.round((255/100) * pl.health) + ",0)"
+      });
+      $("#summoners").html(dMeter + " of " + dNeeded);
+    }
+
+    $("#death a").click(function(e){
+      e.stopPropagation();
+      startLevel(level);
+      game.paused = false;
+      $("#death").hide();
+    });
   </script>
 </body>
 </html>
