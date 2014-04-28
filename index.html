@@ -34,6 +34,8 @@
   	var pl = null;
     var pl_bullets = null;
     var e1 = null;
+    var diamonds = null;
+    var dMeter = 0;
   	var cursors = null;
     var locked = false;
     var lockTimer = 100;
@@ -43,7 +45,9 @@
     var portal = null;
     var portalOpening = null;
     var portalOpen = null;
-    var portalAvailable = true;
+    var portalAvailable = false;
+
+
 
 
   	function preload(){
@@ -54,13 +58,17 @@
       game.load.image("portal-closed", "img/portal.png");
       game.load.image("portal-opening", "img/opening.png");
       game.load.image("portal-open", "img/portal-open.png");
+      game.load.image("diamond", "img/diamond.png");
   	}
+    
   	function create(){
       game.add.tileSprite(0,0,1200,1000,"bg");
       game.world.setBounds(0,0,1200,1000);
   		game.physics.startSystem(Phaser.Physics.ARCADE);
-      portal = game.add.sprite(Math.floor(Math.random() * 10) * 16 + 13, Math.floor(Math.random() * 10) * 16 + 13, "portal-closed");
 
+      //Portal set up
+      portal = game.add.sprite(0, 0, "portal-closed");
+      portal.visible = false;
       game.physics.enable(portal, Phaser.Physics.ARCADE);
       portal.body.immovable = true;
       portal.anchor.setTo(.5, .5);
@@ -73,8 +81,9 @@
       portalOpen = game.add.sprite(portal.body.x, portal.body.y, "portal-open");
       portalOpen.anchor.setTo(.5, .5);
       portalOpen.visible = false;
-  		//game.stage.backgroundColor = "#000000";
 
+
+      //Player set up
   		pl = game.add.sprite(game.width/2 - 8, game.height/2 - 8,"player");
   		game.physics.enable(pl, Phaser.Physics.ARCADE);
   		pl.body.collideWorldBounds = true;
@@ -84,15 +93,22 @@
       pl.cameraOffset.y = 100;
       game.camera.follow(pl);
 
+      //Player bullets set up
       pl_bullets = game.add.group();
       pl_bullets.enableBody = true;
       pl_bullets.physicsBodyType = Phaser.Physics.ARCADE;
 
+      //Enemy set up
       e1 = game.add.group();
       e1.enableBody = true;
       e1.physicsBodyType = Phaser.Physics.ARCADE;
       createEnemy(e1, "enemy1", 100, 100);
 
+
+      //Diamond set up
+      diamonds = game.add.group();
+      diamonds.enableBody = true;
+      diamonds.physicsBodyType = Phaser.Physics.ARCADE;
 
   		cursors = {
         up: game.input.keyboard.addKey(Phaser.Keyboard.W),
@@ -104,6 +120,19 @@
 
     function createExplosion(){
 
+    }
+
+    function showPortal(x,y){
+      x = Math.floor(x / 16) * 16 + 13;
+      y = Math.floor(y / 16) * 16 + 13;
+      portal.x = x;
+      portal.y = y;
+      portal.visible = true;
+      portalOpening.x = x;
+      portalOpening.y = y;
+      portalOpen.x = portal.x;
+      portalOpen.y = portal.y;
+      portalAvailable = true;
     }
 
     function createEnemy(group, sprite, x, y){
@@ -123,6 +152,20 @@
     function onEnemyHit(enemy, bullet){
       bullet.kill();
       enemy.kill();
+      if(Math.random() > .8){
+        //create diamond drop
+        var d = diamonds.getFirstDead();
+        if(d){
+          //reset
+          d.reset(enemy.body.x, enemy.body.y);
+        }
+        else{
+          d = diamonds.create(enemy.body.x + enemy.body.width/2, enemy.body.y + enemy.body.height/2, "diamond");
+          d.anchor.setTo(.5, .5);
+          d.body.setSize(20, 20);
+        }
+
+      }
     }
 
     function onPortalHit(portal, bullet){
@@ -145,8 +188,21 @@
       //TODO: reduce player health
     }
 
+    function onDiamondCollision(player, diamond){
+      diamond.kill();
+      dMeter += 1; //increase portal meter
+      if(dMeter > 0){
+        //show portal
+        var xVar = 100, yVar = 100;
+        if(pl.x + 100 > game.world.width) xVar = -100;
+        if(pl.y + 100 > game.world.height) yVar = -100;
+        showPortal(pl.x + xVar, pl.y + yVar);
+      }
+      
+    }
 
   	function update(){
+      //portalOpening.x = pl.body.x;
       if(endLevel){
         var finalVelocityX = (portal.body.x - pl.body.x)/10;
         pl.body.velocity.x += finalVelocityX/10;
@@ -240,7 +296,10 @@
       }
       game.physics.arcade.overlap(e1, pl_bullets, onEnemyHit);
       game.physics.arcade.overlap(e1, pl, onEnemyPlayerCollision);
-      game.physics.arcade.overlap(portal, pl_bullets, onPortalHit);
+      if(portalAvailable){
+        game.physics.arcade.overlap(portal, pl_bullets, onPortalHit);
+      }
+      game.physics.arcade.overlap(diamonds, pl, onDiamondCollision);
   	}
   	function render(){
       //game.debug.body(pl);
