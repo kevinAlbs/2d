@@ -3,8 +3,9 @@ TODO:
 2. level 2 (with new enemy) [done]
 3. enemy formations [done]
 4. infinite levels [done]
-5. add explosions
+5. add explosions [done]
 5.5. enemy bullets
+5.6. feedback messages
 6. email input and recording of info on back-end
 
 Then submit, and afterwards focus on:

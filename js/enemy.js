@@ -1,4 +1,5 @@
 var genTimer = 700;
+
 function createEnemy(group, sprite, dir, fixedX, fixedY){
   var e = group.getFirstDead();
   if(e != null){
@@ -9,12 +10,16 @@ function createEnemy(group, sprite, dir, fixedX, fixedY){
     e.anchor.setTo(.5, .5);
     if(sprite == "enemy1"){
       e.body.setSize(25, 25, 0, 1);
-      e.health = 1;
     }
     else if(sprite == "enemy2"){
       e.body.setSize(30,30,0,0);
-      e.health = 2;
     }
+  }
+  if(sprite == "enemy1"){
+    e.health = 1;
+  }
+  else if(sprite == "enemy2"){
+    e.health = 2;
   }
   var spread = Math.random() * Math.PI - (Math.PI/2);
   var a = 0;
@@ -91,6 +96,10 @@ function onEnemyHit(enemy, bullet){
   enemy.health -= 1;
   if(enemy.health <= 0){
     enemy.kill();
+    //create explosion
+    emitters[enemy.key].x = enemy.x;
+    emitters[enemy.key].y = enemy.y;
+    emitters[enemy.key].start(true, 500, 0, 15);
   }
   else{
     return;
