@@ -1,12 +1,22 @@
 TODO:
-- level differences (add a startLevel function)
-- feedback and transition and screens
-- add explosions
-- add better CSS styling
-- clean up code
+1. transition menu with feedback [done]
+2. level 2 (with new enemy) [done]
+3. enemy formations [done]
+4. infinite levels [done]
+5. add explosions
+5.5. enemy bullets
+6. email input and recording of info on back-end
 
-If Time:
-- have diamonds move toward player
+Then submit, and afterwards focus on:
+. add sounds/music
+. add better CSS styling
+. clean up code
+. replace health with three hearts
+. split UI to own file
+. nicer transitions between screens
+. hit opacity
+. upgrades
+. have diamonds move toward player
 
 
 Issues:

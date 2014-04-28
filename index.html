@@ -30,9 +30,15 @@
     position: relative;
   }
   #stats{
+    position: relative;
     background: #000;
     padding: 5px;
     border-top: 3px white solid;
+  }
+  #stats .right{
+    position: absolute;
+    right: 5px;
+    top: 5px;
   }
   #stats p{
     color: #FFF;
@@ -82,6 +88,27 @@
     padding: 20px;
     display: none;
   }
+  #next_level label{
+    display: inline-block;
+    width: 100px;
+  }
+  #next_level .value{
+    display:inline-block;
+    width: 100px;
+  }
+  #next_level p{
+    margin: 5px 0px;
+  }
+  #next_level .button{
+    margin-top: 50px;
+  }
+  .button{
+    text-decoration: none;
+    display: inline-block;
+    padding: 5px 10px;
+    background: #8fff68;
+    color: #000;
+  }
   </style>
   
 
@@ -93,7 +120,16 @@
 <body>
 	<div id="container">
     <div class="screen" id="death">
-      <a href="#">Restart?</a>
+      <h1>YOU HAVE DIED</h1>
+      <a href="#" class="button">Restart Level</a>
+    </div>
+    <div class="screen" id="next_level">
+      <h1>STAGE <span id="lnum">0</span> COMPLETE</span></h1>
+      <p data-tag="kills"><label>Kills</label> <span class="value"></span><span class="stars"></span></p>
+      <p data-tag="deaths"><label>Deaths</label> <span class="value"></span><span class="stars"></span></p>
+      <p data-tag="time"><label>Time</label> <span class="value"></span><span class="stars"></span></p>
+      <p data-tag="accuracy"><label>Accuracy</label> <span class="value"></span><span class="stars"></span></p>
+      <a href="#" class="continue button">CONTINUE</a>
     </div>
     <div id="game"></div>
     <div id="stats">
@@ -102,7 +138,11 @@
         <p>Summoners Obtained <span id="summoners"></span></p>
       </div>
       <div class="row">
-        <p>Health <span class="bar" id="health"><span class="fill"></span></spaniv></p>
+        <p>Health <span class="bar" id="health"><span class="fill"></span></span>&nbsp;&nbsp;Deaths <span id="deaths"></span></p>
+      </div>
+      <div class="right">
+        <p>Score <span id="score">0</span></p>
+        <p>Time <span id="time">0</span></p>
       </div>
     </div>
   </div>
@@ -114,34 +154,55 @@
   	var game = new Phaser.Game(800, 600, Phaser.AUTO, "game", {preload: preload, create: create, update: update, render: render});
   	var pl = null;
     var pl_bullets = null;
-    var e1 = null;
+    var e1 = null, e2 = null;
     var diamonds = null;
     var dMeter = 0;
-    var dNeeded = 7;
+    var dNeeded = 1;
     var dGotten = false;
   	var cursors = null;
     var locked = false;
     var lockTimer = 100;
     var endLevel = false;
     var endLevelTimer = 0;
+    var paused = false;
 
     var portal = null;
     var portalOpening = null;
     var portalOpen = null;
     var portalAvailable = false;
 
+    var feedback = {
+      num_fired : 0,
+      num_hit : 0,
+      time: 0,
+      score: 0,
+      deaths: 0
+    }
     var level = 1;
 
     var stats = {
       health: $("#health"),
-      summoners: $("#summoners")
+      summoners: $("#summoners"),
+      plus_one: $("#plus_one"),
+      time: $("#time"),
+      score: $("#score"),
+      deaths: $("#deaths")
     };
+
+    var mode = 2;//0 - hard, 1 - neutral, 2 - easy
 
     function startLevel(n){
       //remove all bullets
       //remove all enemies
+
       level = n;
+      diamonds.forEachAlive(function(d){
+        d.kill();
+      });
       e1.forEachAlive(function(e){
+        e.kill()
+      });
+      e2.forEachAlive(function(e){
         e.kill()
       });
       pl_bullets.forEachAlive(function(b){
@@ -152,7 +213,11 @@
       
       pl.reset(game.width/2, game.height/2);
       pl.health = 100;
+      pl.scale.setTo(1,1);
 
+      feedback.fired = 0;
+      feedback.num_hit = 0;
+      feedback.time = 0;
     }
 
     function resetPortal(){
@@ -166,10 +231,12 @@
       game.load.image("bullet", "img/bullet-glow.png");
       game.load.image("bg", "img/bg.png");
       game.load.image("enemy1", "img/enemy.png");
+      game.load.image("enemy2", "img/enemy2.png");
       game.load.image("portal-closed", "img/portal.png");
       game.load.image("portal-opening", "img/opening.png");
       game.load.image("portal-open", "img/portal-open.png");
       game.load.image("diamond", "img/diamond.png");
+
   	}
 
   	function create(){
@@ -216,6 +283,9 @@
       e1.enableBody = true;
       e1.physicsBodyType = Phaser.Physics.ARCADE;
 
+      e2 = game.add.group();
+      e2.enableBody = true;
+      e2.physicsBodyType = Phaser.Physics.ARCADE;
 
       //Diamond set up
       diamonds = game.add.group();
@@ -281,10 +351,13 @@
         if(pl.y + 100 > game.world.height) yVar = -100;
         showPortal(pl.x + xVar, pl.y + yVar);
       }
-      
+      feedback.score += 1;
     }
 
   	function update(){
+      if(paused){
+        return;
+      }
       //portalOpening.x = pl.body.x;
       if(endLevel){
         var finalVelocityX = (portal.body.x - pl.body.x)/10;
@@ -303,7 +376,7 @@
         }
         endLevelTimer += game.time.elapsed;
         if(endLevelTimer >= 2000){
-          console.log("WIN");
+          showLevelScreen();
           endLevel = false;
         }
         return;
@@ -311,7 +384,7 @@
       if(pl.health <= 0){
         //show explosion
         //pause game
-        game.paused = true;
+        paused = true;
         //show death screen
         $("#death").fadeIn();
       }
@@ -355,6 +428,7 @@
       if(game.input.mouse.button == Phaser.Mouse.LEFT_BUTTON && !locked){
         locked = true;
         lockTimer = 300;
+        feedback.num_fired += 1;
         //fire on interval
         var b = pl_bullets.getFirstDead();
         if(b != null){
@@ -385,6 +459,8 @@
       }
       game.physics.arcade.overlap(e1, pl_bullets, onEnemyHit);
       game.physics.arcade.overlap(e1, pl, onEnemyPlayerCollision);
+      game.physics.arcade.overlap(e2, pl_bullets, onEnemyHit);
+      game.physics.arcade.overlap(e2, pl, onEnemyPlayerCollision);
       if(portalAvailable){
         game.physics.arcade.overlap(portal, pl_bullets, onPortalHit);
       }
@@ -392,20 +468,22 @@
       enemyGen();
       killOutOfBoundEnemies();
       updateStats();
+      feedback.time += game.time.elapsed;
   	}
   	function render(){
       //game.debug.body(pl);
       //game.debug.body(e1.getFirstAlive());
-      if(pl_bullets.getFirstAlive()){
-        //game.debug.body(pl_bullets.getFirstAlive());
-      }
+     /* e2.forEachAlive(function(e){
+        game.debug.body(e);
+      })*/
+      
     }
 
 
     function updateStats(){
       if(dGotten){
         dGotten = false;
-        $("#plus_one").show().animate({
+        stats.plus_one.show().animate({
           "bottom": "180",
           "opacity": "0"
         }, 1000, "linear", function(){
@@ -415,18 +493,78 @@
           }).hide();//reset
         })
       }
-      $("#health").find(".fill").css({
+      stats.health.find(".fill").css({
         width : (pl.health * 3) + "px",
         background: "rgb(" + Math.round((255/100) *(100 - pl.health)) + "," + Math.round((255/100) * pl.health) + ",0)"
       });
-      $("#summoners").html(dMeter + " of " + dNeeded);
+      stats.summoners.html(dMeter + " of " + dNeeded);
+      stats.time.html(Math.round(feedback.time / 1000));
+      stats.score.html(feedback.score);
+      stats.deaths.html(feedback.deaths);
     }
+
+    function showLevelScreen(){
+      paused = true;
+      function starGen(root){
+        root.empty();
+        var v = Math.floor(Math.random() * 2);//0 or 1
+        if(mode == 1){
+          v += 2;
+        }
+        if(mode == 2){
+          v += 3;
+        }
+        for(var i = 0; i < v; i++){
+          root.append("<img src='img/star-filled.png' />");
+        }
+        for(var i = v; i < 4; i++){
+          root.append("<img src='img/star-unfilled.png' />");
+        }
+      }
+
+      $("#lnum").html(level);
+
+      var nl = $("#next_level");
+      var row = nl.find("[data-tag=kills]");
+      row.find(".value").html(feedback.num_hit);
+      starGen(row.find(".stars"));
+
+      row = nl.find("[data-tag=accuracy]");
+      if(feedback.num_fired > 0){
+        row.find(".value").html(Math.round((feedback.num_hit / feedback.num_fired) * 100) + "%");
+      }
+      starGen(row.find(".stars"));
+
+      row = nl.find("[data-tag=time]");
+      row.find(".value").html(Math.round(feedback.time/1000) + " seconds");
+      starGen(row.find(".stars"));
+
+      if(feedback.deaths > 0){
+        row = nl.find("[data-tag=deaths]").show();
+        row.find(".value").html(feedback.deaths);
+        starGen(row.find(".stars"));
+      }
+      else{
+        nl.find("[data-tag=deaths]").hide();
+      }
+      nl.fadeIn();
+      nl.find(".continue").hide();
+      window.setTimeout(function(){nl.find(".continue").fadeIn();}, 2000);
+    }
+
 
     $("#death a").click(function(e){
       e.stopPropagation();
       startLevel(level);
-      game.paused = false;
+      feedback.deaths += 1;
+      paused = false;
       $("#death").hide();
+    });
+    $("#next_level a").click(function(e){
+      e.stopPropagation();
+      startLevel(level + 1);
+      paused = false;
+      $("#next_level").hide();
     });
   </script>
 </body>

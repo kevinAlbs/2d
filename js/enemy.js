@@ -7,7 +7,14 @@ function createEnemy(group, sprite, dir, fixedX, fixedY){
   else{
     e = group.create(0, 0, sprite);
     e.anchor.setTo(.5, .5);
-    e.body.setSize(25, 25, 0, 1);
+    if(sprite == "enemy1"){
+      e.body.setSize(25, 25, 0, 1);
+      e.health = 1;
+    }
+    else if(sprite == "enemy2"){
+      e.body.setSize(30,30,0,0);
+      e.health = 2;
+    }
   }
   var spread = Math.random() * Math.PI - (Math.PI/2);
   var a = 0;
@@ -81,7 +88,15 @@ function killOutOfBoundEnemies(){
 
 function onEnemyHit(enemy, bullet){
   bullet.kill();
-  enemy.kill();
+  enemy.health -= 1;
+  if(enemy.health <= 0){
+    enemy.kill();
+  }
+  else{
+    return;
+  }
+  feedback.score += 1;
+  feedback.num_hit += 1;
   if(Math.random() > .8){
     //create diamond drop
     var d = diamonds.getFirstDead();
@@ -104,7 +119,40 @@ function enemyGen(){
   genTimer -= game.time.elapsed;
   if(genTimer <= 0){
     //create enemy
-    createEnemy(e1, "enemy1", dir[Math.floor(Math.random() * dir.length)]);
+    var r = Math.random();
+    if(level > 1){
+      if(r > .5){
+        createEnemy(e1, "enemy1", dir[Math.floor(Math.random() * dir.length)]);
+      }
+      else{
+        createEnemy(e2, "enemy2", dir[Math.floor(Math.random() * dir.length)]);
+      }
+    }
+    else{
+      createEnemy(e1, "enemy1", dir[Math.floor(Math.random() * dir.length)]);
+    }
+    if(Math.random() < .05){
+      //special move
+      //diamond formation enemy 1
+      var sdir = "top";
+      var startX = Math.random() * (game.world.width - 175);
+      var startY = null;
+      if(Math.random() > .5){
+        sdir = "left";
+        startX = null;
+        startY = Math.random() * (game.world.height - 175);
+      }
+      
+      for(var i = 0; i < 10; i++){
+        createEnemy(e1, "enemy1", sdir, startX, startY);
+        if(sdir == "top"){
+          startX += 30;
+        }
+        else if(sdir == "left"){
+          startY += 30;
+        }
+      }
+    }
     genTimer = 750 - (level * 50);
   }
 }
