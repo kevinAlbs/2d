@@ -28,8 +28,9 @@
     <div id="game"></div>
   </div>
   <script src="js/phaser.js"></script>
+  <script src="js/enemy.js"></script>
   <script>
-  	(function(){
+
   	var game = new Phaser.Game(800, 600, Phaser.AUTO, "game", {preload: preload, create: create, update: update, render: render});
   	var pl = null;
     var pl_bullets = null;
@@ -47,6 +48,8 @@
     var portalOpen = null;
     var portalAvailable = false;
 
+    var level = 1;
+
 
 
 
@@ -60,7 +63,7 @@
       game.load.image("portal-open", "img/portal-open.png");
       game.load.image("diamond", "img/diamond.png");
   	}
-    
+
   	function create(){
       game.add.tileSprite(0,0,1200,1000,"bg");
       game.world.setBounds(0,0,1200,1000);
@@ -102,7 +105,6 @@
       e1 = game.add.group();
       e1.enableBody = true;
       e1.physicsBodyType = Phaser.Physics.ARCADE;
-      createEnemy(e1, "enemy1", 100, 100);
 
 
       //Diamond set up
@@ -135,38 +137,7 @@
       portalAvailable = true;
     }
 
-    function createEnemy(group, sprite, x, y){
-      var e = group.getFirstDead();
-      if(e != null){
-        e.reset(x,y);
-      }
-      else{
-        e = group.create(x, y, sprite);
-        e.anchor.setTo(.5, .5);
-        e.body.setSize(25, 25, 0, 1);
-      }
-      e.hasEntered = false;//custom property
-      e.outOfBoundsKill = true;
-      e.body.velocity.x = 100;
-    }
-    function onEnemyHit(enemy, bullet){
-      bullet.kill();
-      enemy.kill();
-      if(Math.random() > .8){
-        //create diamond drop
-        var d = diamonds.getFirstDead();
-        if(d){
-          //reset
-          d.reset(enemy.body.x, enemy.body.y);
-        }
-        else{
-          d = diamonds.create(enemy.body.x + enemy.body.width/2, enemy.body.y + enemy.body.height/2, "diamond");
-          d.anchor.setTo(.5, .5);
-          d.body.setSize(20, 20);
-        }
 
-      }
-    }
 
     function onPortalHit(portal, bullet){
       bullet.kill();
@@ -300,6 +271,8 @@
         game.physics.arcade.overlap(portal, pl_bullets, onPortalHit);
       }
       game.physics.arcade.overlap(diamonds, pl, onDiamondCollision);
+      enemyGen();
+      killOutOfBoundEnemies();
   	}
   	function render(){
       //game.debug.body(pl);
@@ -309,7 +282,7 @@
       }
     }
 
-   }());
+
   </script>
 </body>
 </html>
