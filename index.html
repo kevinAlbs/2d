@@ -269,45 +269,7 @@
 
     var mode = 2;//0 - hard, 1 - neutral, 2 - easy
 
-    function startLevel(n){
-      //remove all bullets
-      //remove all enemies
-
-      level = n;
-      diamonds.forEachAlive(function(d){
-        d.kill();
-      });
-      e1.forEachAlive(function(e){
-        e.kill()
-      });
-      e2.forEachAlive(function(e){
-        e.kill()
-      });
-      pl_bullets.forEachAlive(function(b){
-        b.kill();
-      });
-      e_bullets.forEachAlive(function(b){
-        b.kill();
-      });
-      dMeter = 0;
-      dNeeded = 3 + ((n-1) * 2);
-      resetPortal();
-      
-      pl.reset(game.width/2, game.height/2);
-      pl.health = 100;
-      pl.scale.setTo(1,1);
-
-      //feedback.fired = 0;
-      //feedback.num_hit = 0;
-      //feedback.time = 0;
-    }
-
-    function resetPortal(){
-      portalAvailable = false;
-      portalOpening.scale.setTo(0,0);
-      portalOpen.visible = false;
-      portal.visible = false;
-    }
+    
   	function preload(){
   		game.load.image("player", "img/player-glow.png");
       game.load.image("bullet", "img/bullet-glow.png");
@@ -399,59 +361,6 @@
   	}
 
 
-    function showPortal(x,y){
-      x = Math.floor(x / 16) * 16 + 13;
-      y = Math.floor(y / 16) * 16 + 13;
-      portal.x = x;
-      portal.y = y;
-      portal.visible = true;
-      portalOpening.x = x;
-      portalOpening.y = y;
-      portalOpen.x = portal.x;
-      portalOpen.y = portal.y;
-      portalAvailable = true;
-    }
-
-
-
-    function onPortalHit(portal, bullet){
-      bullet.kill();
-      if(portalOpening.scale.x >= 1){
-        //end level
-        portalOpen.visible = true;
-        endLevel = true;
-      }
-      else{
-        portalOpening.scale.x += .05;
-        portalOpening.scale.y += .05;
-      }
-    }
-
-    //For some unknown reason, order is flipped, perhaps because player is sprite and enemy is group??
-    function onEnemyPlayerCollision(player, enemy){
-      enemy.kill();
-      //TODO: reduce player health
-      pl.health -= 20;
-    }
-    function onBulletPlayerCollision(player, bullet){
-      bullet.kill();
-      pl.health -= 20;
-    }
-
-    function onDiamondCollision(player, diamond){
-      diamond.kill();
-      dMeter += 1; //increase portal meter
-      dGotten = true;//to show plus one
-      if(dMeter >= dNeeded){
-        //show portal
-        var xVar = 100, yVar = 100;
-        if(pl.x + 100 > game.world.width) xVar = -100;
-        if(pl.y + 100 > game.world.height) yVar = -100;
-        showPortal(pl.x + xVar, pl.y + yVar);
-      }
-      feedback.score += 1;
-      sounds.diamond.play();
-    }
 
   	function update(){
       if(paused){
@@ -584,10 +493,98 @@
     }
 
 
-    
+    function startLevel(n){
+      //remove all bullets
+      //remove all enemies
 
-    
+      level = n;
+      diamonds.forEachAlive(function(d){
+        d.kill();
+      });
+      e1.forEachAlive(function(e){
+        e.kill()
+      });
+      e2.forEachAlive(function(e){
+        e.kill()
+      });
+      pl_bullets.forEachAlive(function(b){
+        b.kill();
+      });
+      e_bullets.forEachAlive(function(b){
+        b.kill();
+      });
+      dMeter = 0;
+      dNeeded = 3 + ((n-1) * 2);
+      resetPortal();
+      
+      pl.reset(game.width/2, game.height/2);
+      pl.health = 100;
+      pl.scale.setTo(1,1);
 
+      //feedback.fired = 0;
+      //feedback.num_hit = 0;
+      //feedback.time = 0;
+    }
+
+    function resetPortal(){
+      portalAvailable = false;
+      portalOpening.scale.setTo(0,0);
+      portalOpen.visible = false;
+      portal.visible = false;
+    }
+    function showPortal(x,y){
+      x = Math.floor(x / 16) * 16 + 13;
+      y = Math.floor(y / 16) * 16 + 13;
+      portal.x = x;
+      portal.y = y;
+      portal.visible = true;
+      portalOpening.x = x;
+      portalOpening.y = y;
+      portalOpen.x = portal.x;
+      portalOpen.y = portal.y;
+      portalAvailable = true;
+    }
+
+
+
+    function onPortalHit(portal, bullet){
+      bullet.kill();
+      if(portalOpening.scale.x >= 1){
+        //end level
+        portalOpen.visible = true;
+        endLevel = true;
+      }
+      else{
+        portalOpening.scale.x += .05;
+        portalOpening.scale.y += .05;
+      }
+    }
+
+    //For some unknown reason, order is flipped, perhaps because player is sprite and enemy is group??
+    function onEnemyPlayerCollision(player, enemy){
+      enemy.kill();
+      //TODO: reduce player health
+      pl.health -= 20;
+    }
+    function onBulletPlayerCollision(player, bullet){
+      bullet.kill();
+      pl.health -= 20;
+    }
+
+    function onDiamondCollision(player, diamond){
+      diamond.kill();
+      dMeter += 1; //increase portal meter
+      dGotten = true;//to show plus one
+      if(dMeter >= dNeeded){
+        //show portal
+        var xVar = 100, yVar = 100;
+        if(pl.x + 100 > game.world.width) xVar = -100;
+        if(pl.y + 100 > game.world.height) yVar = -100;
+        showPortal(pl.x + xVar, pl.y + yVar);
+      }
+      feedback.score += 1;
+      sounds.diamond.play();
+    }
     function startTheGame(){
       $("#stats").fadeIn();
       $("#email").fadeOut(500, function(){
