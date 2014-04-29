@@ -2,6 +2,7 @@ var genTimer = 700;
 
 function fireBullet(enemy, target, angle){
     var b = e_bullets.getFirstDead();
+    sounds.eFire.play();
     if(b != null){
       b.reset(enemy.body.x + enemy.body.width/2, enemy.body.y + enemy.body.height/2);
     }
@@ -123,6 +124,7 @@ function onEnemyHit(enemy, bullet){
     emitters[enemy.key].x = enemy.x;
     emitters[enemy.key].y = enemy.y;
     emitters[enemy.key].start(true, 500, 0, 15);
+    sounds.explode.play();
   }
   else{
     return;

@@ -5,11 +5,12 @@ TODO:
 4. infinite levels [done]
 5. add explosions [done]
 5.5. enemy bullets [done]
-5.6. feedback messages
-6. email input and recording of info on back-end
+5.6. feedback messages [done]
+6. email input and recording of info on back-end [done]
 
 Then submit, and afterwards focus on:
 . add sounds/music
+. make music play through Phaser?
 . add better CSS styling
 . clean up code
 . replace health with three hearts
@@ -21,3 +22,4 @@ Then submit, and afterwards focus on:
 
 
 Issues:
+- 10 second prevention not working

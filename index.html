@@ -167,6 +167,9 @@
     margin: 10px 0px;
     padding: 3px;
   }
+  #death{
+    height: 100px;
+  }
   </style>
   
 
@@ -222,6 +225,7 @@
   <script src="js/phaser.js"></script>
   <script src="js/jquery.js"></script>
   <script src="js/enemy.js"></script>
+  <script src="js/ui.js"></script>
   <script>
 
   	var game = new Phaser.Game(800, 600, Phaser.AUTO, "game", {preload: preload, create: create, update: update, render: render});
@@ -249,7 +253,9 @@
       enemy1: null,
       enemy2: null
     }
-
+    var sounds = {
+      hit: null
+    };
     var feedback = {
       num_fired : 0,
       num_hit : 0,
@@ -257,22 +263,9 @@
       score: 0,
       deaths: 0
     }
+    var level = 1;
 
-    var messages = {
-      0: ["Poor performance", "Below average", "You need to do better", "Mediocre"],
-      1: ["Okay", "Not bad", "Alright"],
-      2: ["Awesome!", "Spectacular!", "Incredible!"]
-    };
-    var level = 2;
 
-    var stats = {
-      health: $("#health"),
-      summoners: $("#summoners"),
-      plus_one: $("#plus_one"),
-      time: $("#time"),
-      score: $("#score"),
-      deaths: $("#deaths")
-    };
 
     var mode = 2;//0 - hard, 1 - neutral, 2 - easy
 
@@ -297,16 +290,16 @@
         b.kill();
       });
       dMeter = 0;
-      dNeeded = 3 + ((n-1) * 7);
+      dNeeded = 3 + ((n-1) * 2);
       resetPortal();
       
       pl.reset(game.width/2, game.height/2);
       pl.health = 100;
       pl.scale.setTo(1,1);
 
-      feedback.fired = 0;
-      feedback.num_hit = 0;
-      feedback.time = 0;
+      //feedback.fired = 0;
+      //feedback.num_hit = 0;
+      //feedback.time = 0;
     }
 
     function resetPortal(){
@@ -328,10 +321,17 @@
       game.load.image("portal-open", "img/portal-open.png");
       game.load.image("diamond", "img/diamond.png");
       game.load.image("e_bullet", "img/enemy_bullet.png");
-
+      game.load.audio("hit", "sounds/hit.ogg");
+      game.load.audio("eFire", "sounds/eFire.ogg");
+      game.load.audio("explode", "sounds/explode.ogg");
+      game.load.audio("diamond", "sounds/diamond.ogg");
   	}
 
   	function create(){
+      sounds.hit = game.add.audio("hit");
+      sounds.eFire = game.add.audio("eFire");
+      sounds.explode = game.add.audio("explode");
+      sounds.diamond = game.add.audio("diamond");
       game.add.tileSprite(0,0,1200,1000,"bg");
       game.world.setBounds(0,0,1200,1000);
   		game.physics.startSystem(Phaser.Physics.ARCADE);
@@ -398,9 +398,6 @@
   		
   	}
 
-    function createExplosion(){
-
-    }
 
     function showPortal(x,y){
       x = Math.floor(x / 16) * 16 + 13;
@@ -419,7 +416,6 @@
 
     function onPortalHit(portal, bullet){
       bullet.kill();
-      
       if(portalOpening.scale.x >= 1){
         //end level
         portalOpen.visible = true;
@@ -435,11 +431,11 @@
     function onEnemyPlayerCollision(player, enemy){
       enemy.kill();
       //TODO: reduce player health
-      pl.health -= 100;
+      pl.health -= 20;
     }
     function onBulletPlayerCollision(player, bullet){
       bullet.kill();
-      pl.health -= 10;
+      pl.health -= 20;
     }
 
     function onDiamondCollision(player, diamond){
@@ -454,6 +450,7 @@
         showPortal(pl.x + xVar, pl.y + yVar);
       }
       feedback.score += 1;
+      sounds.diamond.play();
     }
 
   	function update(){
@@ -478,7 +475,7 @@
         }
         endLevelTimer += game.time.elapsed;
         if(endLevelTimer >= 2000){
-          showLevelScreen();
+          UI.showLevelScreen();
           endLevel = false;
         }
         return;
@@ -486,6 +483,7 @@
       if(pl.health <= 0){
         //show explosion
         //pause game
+        pl.kill();
         paused = true;
         //show death screen
         $("#death").fadeIn();
@@ -528,6 +526,7 @@
       }
 
       if(game.input.mouse.button == Phaser.Mouse.LEFT_BUTTON && !locked){
+        sounds.hit.play();
         locked = true;
         lockTimer = 300;
         feedback.num_fired += 1;
@@ -571,7 +570,7 @@
       enemyGen();
       fireUpdate();//update enemy fire
       killOutOfBoundEnemies();
-      updateStats();
+      UI.updateStats();
       feedback.time += game.time.elapsed;
 
   	}
@@ -585,90 +584,9 @@
     }
 
 
-    function updateStats(){
-      if(dGotten){
-        dGotten = false;
-        stats.plus_one.show().animate({
-          "bottom": "180",
-          "opacity": "0"
-        }, 1000, "linear", function(){
-          $(this).css({
-          "bottom": "50px",
-          "opacity": "1"
-          }).hide();//reset
-        })
-      }
-      stats.health.find(".fill").css({
-        width : (pl.health * 3) + "px",
-        background: "rgb(" + Math.round((255/100) *(100 - pl.health)) + "," + Math.round((255/100) * pl.health) + ",0)"
-      });
-      stats.summoners.html(dMeter + " of " + dNeeded);
-      stats.time.html(Math.round(feedback.time / 1000));
-      stats.score.html(feedback.score);
-      stats.deaths.html(feedback.deaths);
-    }
+    
 
-    function showLevelScreen(){
-      paused = true;
-      function starGen(root){
-        root.empty();
-        var v = Math.floor(Math.random() * 2);//0 or 1
-        if(mode == 1){
-          v += 2;
-        }
-        if(mode == 2){
-          v += 3;
-        }
-        for(var i = 0; i < v; i++){
-          root.append("<img src='img/star-filled.png' />");
-        }
-        for(var i = v; i < 4; i++){
-          root.append("<img src='img/star-unfilled.png' />");
-        }
-      }
-
-      $("#lnum").html(level);
-
-      var nl = $("#next_level");
-      var row = nl.find("[data-tag=kills]");
-      row.find(".value").html(feedback.num_hit);
-      starGen(row.find(".stars"));
-
-      row = nl.find("[data-tag=accuracy]");
-      if(feedback.num_fired > 0){
-        row.find(".value").html(Math.round((feedback.num_hit / feedback.num_fired) * 100) + "%");
-      }
-      starGen(row.find(".stars"));
-
-      row = nl.find("[data-tag=time]");
-      row.find(".value").html(Math.round(feedback.time/1000) + " seconds");
-      starGen(row.find(".stars"));
-
-      if(feedback.deaths > 0){
-        row = nl.find("[data-tag=deaths]").show();
-        row.find(".value").html(feedback.deaths);
-        starGen(row.find(".stars"));
-      }
-      else{
-        nl.find("[data-tag=deaths]").hide();
-      }
-
-      var grades= ["F", "C", "A"];
-      //grade is always an F LOLOL
-      nl.find(".grade .value").html(grades[mode]);
-      nl.find(".grade .value").attr("data-grade", grades[mode].toLowerCase());
-      
-      nl.fadeIn();
-      nl.find(".continue").hide();
-      window.setTimeout(function(){nl.find(".continue").fadeIn();}, 2000);
-    }
-
-    $("#intro").show();
-    $("#intro a").click(function(e){
-      e.stopPropagation();
-      $("#intro").fadeOut();
-      $("#email").show();
-    });
+    
 
     function startTheGame(){
       $("#stats").fadeIn();
@@ -683,38 +601,51 @@
         };
       });
     }
-    $("#email a").click(function(e){
-      e.stopPropagation();
-      mode = Math.floor(Math.random() * 3);//LOLOLOL
-      var email = $("#email_input").val().trim();
-      //check if they entered in en email
-      if(email == ""){
-        var r = confirm("Are you sure you want to skip the email?")
-        if(r) startTheGame();
-      }
-      else{
-        //ajax request to store this
-        startTheGame();
-      }
-    })
+    
+   window.onbeforeunload = function (e) {
+    var email = $("#email_input").val().trim();
+    if(email == ""){
+      return;
+    }
 
-    $("#death a").click(function(e){
-      e.stopPropagation();
-      startLevel(level);
-      feedback.deaths += 1;
-      paused = false;
-      $("#death").hide();
-    });
-    $("#next_level a").click(function(e){
-      e.stopPropagation();
-      startLevel(level + 1);
-      paused = false;
-      $("#next_level").hide();
-    });
+    //send ajax
+      var data = {
+        email: email,
+        level: level,
+        mode: mode,
+        num_fired: feedback.num_fired,
+        num_killed: feedback.num_hit,
+        deaths: feedback.deaths,
+        record: "end"
+      };
+      $.ajax({
+        url: "record.php",
+        method: "post",
+        data: data,
+        async: false,
+        success: function(resp){
+          console.log("Complete");
+          console.log(resp);
+        }
 
-    window.onbeforeunload = function (e) {
-      //send ajax request
-    };
+      });
+  };
+
+  var aud = new Audio();
+  aud.preload = "auto"
+  aud.src = "sounds/background.ogg";
+  aud.play();
   </script>
+
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-37996372-7', 'kevinalbs.com');
+  ga('send', 'pageview');
+
+</script>
 </body>
 </html>
