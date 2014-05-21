@@ -14,12 +14,20 @@ var UI = (function(){
 	$("#intro a").click(function(e){
 	  e.stopPropagation();
 	  $("#intro").fadeOut();
-	  $("#email").show();
+	  if(!config.grading){
+	  	startTheGame();
+	  }
+	  else{
+	  	$("#email").show();
+	  }
 	});
 
 
 	$("#email a").click(function(e){
 	  e.stopPropagation();
+	  if(!config.grading){
+	  	return;		
+	  }
 	  mode = Math.floor(Math.random() * 3);//LOLOLOL
 	  var email = $("#email_input").val().trim();
 	  //check if they entered in en email
@@ -28,6 +36,7 @@ var UI = (function(){
 	    if(r) startTheGame();
 	  }
 	  else{
+
 	    //ajax request to store this
 	    $.ajax({
 	      url: "record.php",
@@ -64,6 +73,10 @@ var UI = (function(){
 	that.showLevelScreen = function(){
 	  paused = true;
 	  function starGen(root){
+	  	if(!config.grading){
+	  		root.hide();
+	  		return;
+	  	}
 	    root.empty();
 	    var v = Math.floor(Math.random() * 2);//0 or 1
 	    if(mode == 1){
@@ -105,7 +118,9 @@ var UI = (function(){
 	  else{
 	    nl.find("[data-tag=deaths]").hide();
 	  }
-
+	  if(!config.grading){
+	  	nl.find(".grade").hide();
+	  }
 	  var grades= ["F", "C", "A"];
 	  //grade is always an F LOLOL
 	  nl.find(".grade .value").html(grades[mode]);
@@ -113,8 +128,9 @@ var UI = (function(){
 	  
 	  nl.fadeIn();
 	  nl.find(".continue").hide();
-	  window.setTimeout(function(){nl.find(".continue").fadeIn();}, 2000);
+	  window.setTimeout(function(){nl.find(".continue").fadeIn();}, 1000);
 	}
+
 	that.updateStats = function(){
 	  if(dGotten){
 	    dGotten = false;
